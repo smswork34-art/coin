@@ -507,7 +507,7 @@
             margin-bottom: 16px;
         }
 
-        /* Stylish subscribe button with icon1.png */
+        /* Stylish subscribe button with image.png */
         .subscribe-btn {
             width: 100%;
             background: linear-gradient(105deg, rgba(30, 30, 38, 0.9) 0%, rgba(20, 20, 28, 0.95) 100%);
@@ -565,7 +565,7 @@
             opacity: 0.7;
         }
 
-        /* channel icon using icon1.png */
+        /* channel icon using image.png */
         .channel-icon-img {
             width: 28px;
             height: 28px;
@@ -812,7 +812,7 @@
             <div class="bonus-section">
                 <div class="bonus-title" id="subscribeBonusTitle">CHANNEL BONUS</div>
                 <button class="subscribe-btn" id="subscribeBtn">
-                    <img src="icon1.png" alt="channel" class="channel-icon-img" id="channelIconImg" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23d4af37\' stroke-width=\'1.5\'%3E%3Cpath d=\'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z\'/%3E%3C/svg%3E';">
+                    <img src="image.png" alt="channel" class="channel-icon-img" id="channelIconImg" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23d4af37\' stroke-width=\'1.5\'%3E%3Cpath d=\'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z\'/%3E%3C/svg%3E';">
                     <span class="channel-name">W-T Coin</span>
                     <span id="subscribeBtnText">Join & Get 1 W-T</span>
                 </button>
@@ -1030,10 +1030,10 @@
                 
                 const subscribeBtn = document.getElementById('subscribeBtn');
                 if (subscribeClaimed) {
-                    subscribeBtn.innerHTML = `<img src="icon1.png" class="channel-icon-img" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23d4af37\' stroke-width=\'1.5\'%3E%3Cpath d=\'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z\'/%3E%3C/svg%3E';"> <span class="channel-name">W-T Coin</span> <span>${t.subscribeClaimedText}</span>`;
+                    subscribeBtn.innerHTML = `<img src="image.png" class="channel-icon-img" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23d4af37\' stroke-width=\'1.5\'%3E%3Cpath d=\'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z\'/%3E%3C/svg%3E';"> <span class="channel-name">W-T Coin</span> <span>${t.subscribeClaimedText}</span>`;
                     subscribeBtn.disabled = true;
                 } else {
-                    subscribeBtn.innerHTML = `<img src="icon1.png" class="channel-icon-img" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23d4af37\' stroke-width=\'1.5\'%3E%3Cpath d=\'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z\'/%3E%3C/svg%3E';"> <span class="channel-name">W-T Coin</span> <span>${t.subscribeBtnText}</span>`;
+                    subscribeBtn.innerHTML = `<img src="image.png" class="channel-icon-img" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23d4af37\' stroke-width=\'1.5\'%3E%3Cpath d=\'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z\'/%3E%3C/svg%3E';"> <span class="channel-name">W-T Coin</span> <span>${t.subscribeBtnText}</span>`;
                     subscribeBtn.disabled = false;
                 }
                 
