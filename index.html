@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>W-T · Tap Miner</title>
+    <!-- Telegram Mini App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: #07070a;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-weight: 400;
+            line-height: 1.4;
+            overflow-x: hidden;
+            font-smoothing: antialiased;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Page transitions */
+        .page {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            background: #07070a;
+        }
+
+        .page-main {
+            transform: translateX(0);
+            z-index: 10;
+        }
+
+        .page-profile {
+            transform: translateX(100%);
+            z-index: 20;
+        }
+
+        .page-profile.active {
+            transform: translateX(0);
+        }
+
+        .page-main.profile-open {
+            transform: translateX(-25%);
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .content {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 20px 20px 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 28px;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .profile-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 40px;
+            padding: 8px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.25s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .profile-btn:hover {
+            background: rgba(212, 175, 55, 0.12);
+            border-color: rgba(212, 175, 55, 0.3);
+        }
+
+        .profile-user {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .profile-user-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #d4af37, #f5e56b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #07070a;
+        }
+
+        .profile-user-name {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #ffffff;
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .lang-selector {
+            display: flex;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            padding: 4px;
+            border-radius: 60px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .lang-btn {
+            background: transparent;
+            border: none;
+            padding: 6px 18px;
+            border-radius: 60px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.5);
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .lang-btn.active {
+            background: linear-gradient(135deg, #d4af37, #f5e56b);
+            color: #07070a;
+            box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+        }
+
+        /* Logo Section */
+        .logo-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            margin-top: 20px;
+        }
+
+        .tap-target {
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.12s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        }
+
+        .tap-target:active {
+            transform: scale(0.96);
+        }
+
+        .tap-target.disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        @keyframes softGlow {
+            0% { box-shadow: 0 20px 40px rgba(212, 175, 55, 0.2), 0 0 0 4px rgba(212, 175, 55, 0.1); }
+            50% { box-shadow: 0 25px 50px rgba(212, 175, 55, 0.35), 0 0 0 6px rgba(212, 175, 55, 0.2); }
+            100% { box-shadow: 0 20px 40px rgba(212, 175, 55, 0.2), 0 0 0 4px rgba(212, 175, 55, 0.1); }
+        }
+
+        .coin-logo {
+            width: 180px;
+            height: 180px;
+            background: linear-gradient(135deg, #d4af37, #f5e56b);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: softGlow 3s ease-in-out infinite;
+        }
+
+        .coin-logo svg {
+            width: 100px;
+            height: 100px;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2));
+        }
+
+        @keyframes rotateSmooth {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .cooldown-ring {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, #d4af37, rgba(212, 175, 55, 0.3), rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.3), #d4af37);
+            mask: radial-gradient(transparent 65%, black 66%);
+            -webkit-mask: radial-gradient(transparent 65%, black 66%);
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+
+        .cooldown-ring.active {
+            opacity: 1;
+            animation: rotateSmooth 3s linear infinite;
+        }
+
+        .tap-hint {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            padding: 8px 20px;
+            border-radius: 60px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            font-weight: 450;
+        }
+
+        .cooldown-timer {
+            color: #d4af37;
+            font-weight: 600;
+            font-family: monospace;
+        }
+
+        .token-name {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #d4af37);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+        }
+
+        .token-symbol {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-weight: 500;
+        }
+
+        /* Balance Card */
+        .balance-card {
+            background: rgba(20, 20, 28, 0.5);
+            backdrop-filter: blur(20px);
+            border-radius: 48px;
+            padding: 28px 24px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            width: 100%;
+        }
+
+        .balance-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .balance-value {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff, #d4af37);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .balance-value small {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: 500;
+        }
+
+        /* Stats */
+        .stats-row {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: rgba(20, 20, 28, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 28px;
+            padding: 16px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-label {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #d4af37;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #d4af37, #f5e56b);
+            border-radius: 4px;
+            transition: width 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        }
+
+        /* Profile Page */
+        .profile-page {
+            background: #07070a;
+            min-height: 100vh;
+            padding-bottom: 30px;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px 20px 0;
+            margin-bottom: 24px;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: rgba(212, 175, 55, 0.15);
+        }
+
+        .back-btn svg {
+            width: 22px;
+            height: 22px;
+            stroke: white;
+        }
+
+        .profile-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #d4af37);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+        }
+
+        .profile-avatar-section {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        @keyframes avatarGlow {
+            0% { box-shadow: 0 12px 28px rgba(212, 175, 55, 0.2); }
+            100% { box-shadow: 0 12px 32px rgba(212, 175, 55, 0.4); }
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #d4af37, #f5e56b);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #07070a;
+            animation: avatarGlow 2s ease-in-out infinite alternate;
+        }
+
+        .profile-info-card {
+            background: rgba(20, 20, 28, 0.6);
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            margin: 0 20px 20px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .profile-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 8px;
+            letter-spacing: -0.2px;
+        }
+
+        .profile-id {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+            text-align: center;
+            font-family: monospace;
+            margin-bottom: 24px;
+        }
+
+        .stats-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-row-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .stat-row-left svg {
+            width: 20px;
+            height: 20px;
+            stroke: #d4af37;
+        }
+
+        .stat-row-right {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #d4af37;
+        }
+
+        /* Bonus Section - only channel bonus, no extra icons */
+        .bonus-section {
+            margin: 0 20px 20px;
+        }
+
+        .bonus-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 16px;
+        }
+
+        /* Stylish subscribe button with icon1.png */
+        .subscribe-btn {
+            width: 100%;
+            background: linear-gradient(105deg, rgba(30, 30, 38, 0.9) 0%, rgba(20, 20, 28, 0.95) 100%);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            border-radius: 80px;
+            padding: 18px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(212, 175, 55, 0);
+            position: relative;
+            overflow: hidden;
+            font-family: inherit;
+        }
+
+        .subscribe-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .subscribe-btn:hover::before {
+            left: 100%;
+        }
+
+        .subscribe-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            border-color: #d4af37;
+            box-shadow: 0 12px 28px rgba(212, 175, 55, 0.25);
+            background: linear-gradient(105deg, rgba(35, 35, 45, 0.95), rgba(25, 25, 35, 0.98));
+        }
+
+        .subscribe-btn:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+
+        .subscribe-btn:disabled {
+            background: rgba(20, 20, 28, 0.7);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.7;
+        }
+
+        /* channel icon using icon1.png */
+        .channel-icon-img {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+            display: block;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+        }
+
+        .channel-name {
+            font-weight: 700;
+            background: linear-gradient(120deg, #fff, #d4af37);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: 0.3px;
+            font-size: 1rem;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.2);
+            margin-top: 24px;
+            padding: 16px 20px;
+            font-weight: 450;
+        }
+
+        /* Animations */
+        @keyframes elegantRipple {
+            0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0.7; }
+            100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+        }
+
+        .tap-ripple {
+            position: fixed;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.6), rgba(212, 175, 55, 0.2), transparent);
+            pointer-events: none;
+            animation: elegantRipple 0.55s cubic-bezier(0.2, 0.9, 0.4, 1) forwards;
+            z-index: 1000;
+        }
+
+        @keyframes elegantFloat {
+            0% { transform: translate(-50%, 0) scale(0.8); opacity: 1; }
+            40% { transform: translate(-50%, -25px) scale(1.1); }
+            100% { transform: translate(-50%, -65px) scale(0.9); opacity: 0; }
+        }
+
+        .tap-number {
+            position: fixed;
+            font-size: 1.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #d4af37, #f5e56b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            pointer-events: none;
+            animation: elegantFloat 0.7s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+            z-index: 1001;
+            white-space: nowrap;
+        }
+
+        @keyframes coinPulse {
+            0% { filter: brightness(1); transform: scale(1); }
+            50% { filter: brightness(1.08); transform: scale(1.02); }
+            100% { filter: brightness(1); transform: scale(1); }
+        }
+
+        .coin-flash {
+            animation: coinPulse 0.25s ease-out;
+        }
+
+        .balance-pulse {
+            animation: balanceHighlight 0.35s ease-out;
+        }
+
+        @keyframes balanceHighlight {
+            0% { text-shadow: 0 0 0px rgba(212, 175, 55, 0); }
+            50% { text-shadow: 0 0 12px rgba(212, 175, 55, 0.6); }
+            100% { text-shadow: 0 0 0px rgba(212, 175, 55, 0); }
+        }
+
+        @media (max-width: 480px) {
+            .coin-logo { width: 150px; height: 150px; }
+            .coin-logo svg { width: 80px; height: 80px; }
+            .balance-value { font-size: 2.5rem; }
+            .subscribe-btn { padding: 14px 20px; font-size: 0.9rem; }
+            .channel-name { font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Page -->
+    <div class="page page-main" id="mainPage">
+        <div class="content">
+            <div class="header-top">
+                <button class="profile-btn" id="openProfileBtn">
+                    <div class="profile-user">
+                        <div class="profile-user-avatar" id="headerAvatar">U</div>
+                        <div class="profile-user-name" id="headerName">User</div>
+                    </div>
+                </button>
+                <div class="lang-selector">
+                    <button class="lang-btn active" data-lang="ru">RU</button>
+                    <button class="lang-btn" data-lang="en">EN</button>
+                </div>
+            </div>
+
+            <div class="logo-section">
+                <div class="tap-target" id="tapTarget">
+                    <div class="coin-logo" id="coinLogo">
+                        <svg viewBox="0 0 100 100" fill="none">
+                            <circle cx="50" cy="50" r="46" fill="url(#gradient)" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+                            <path d="M50 28 L54 40 L67 42 L57 50 L61 63 L50 55 L39 63 L43 50 L33 42 L46 40 L50 28Z" fill="white" fill-opacity="0.95"/>
+                            <defs>
+                                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#D4AF37"/>
+                                    <stop offset="100%" stop-color="#F5E56B"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <div class="cooldown-ring" id="cooldownRing"></div>
+                </div>
+                <div class="tap-hint">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M7 10L12 5L17 10M7 14L12 19L17 14"/>
+                        <path d="M12 5v14"/>
+                    </svg>
+                    <span id="tapHintText">Tap to earn | +0.02 W-T</span>
+                    <span class="cooldown-timer" id="cooldownTimer"></span>
+                </div>
+                <div class="token-name">W-T</div>
+                <div class="token-symbol" id="tokenSymbol">WAVES TOKEN</div>
+            </div>
+
+            <div class="balance-card">
+                <div class="balance-label">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                    <span id="balanceLabel">TOTAL BALANCE</span>
+                </div>
+                <div class="balance-value" id="balanceDisplay">0.00 <small>W-T</small></div>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        <span id="todayLabel">TODAY TAPS</span>
+                    </div>
+                    <div class="stat-value" id="todayTaps">0</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="tapProgress" style="width: 0%"></div>
+                    </div>
+                    <div style="font-size:0.65rem; margin-top:6px; color:rgba(255,255,255,0.4)" id="maxTapsSub">/ 121</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M12 8v4l3 3M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+                        </svg>
+                        <span id="totalTapsLabel">TOTAL TAPS</span>
+                    </div>
+                    <div class="stat-value" id="totalTaps">0</div>
+                </div>
+            </div>
+
+            <!-- No footer note anymore -->
+        </div>
+    </div>
+
+    <!-- Profile Page (only Channel Bonus, no extra icon) -->
+    <div class="page page-profile" id="profilePage">
+        <div class="profile-page">
+            <div class="profile-header">
+                <button class="back-btn" id="closeProfileBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                </button>
+                <h2 id="profileTitle">Profile</h2>
+            </div>
+
+            <div class="profile-avatar-section">
+                <div class="profile-avatar" id="profileAvatar">W</div>
+            </div>
+
+            <div class="profile-info-card">
+                <div class="profile-name" id="profileName">W-T User</div>
+                <div class="profile-id" id="profileId">ID: loading...</div>
+
+                <div class="stats-grid">
+                    <div class="stat-row">
+                        <div class="stat-row-left">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
+                            </svg>
+                            <span id="profileBalanceLabel">Balance</span>
+                        </div>
+                        <div class="stat-row-right" id="profileBalance">0.00 W-T</div>
+                    </div>
+                    <div class="stat-row">
+                        <div class="stat-row-left">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <span id="profileTodayLabel">Today Taps</span>
+                        </div>
+                        <div class="stat-row-right" id="profileTodayTaps">0 / 121</div>
+                    </div>
+                    <div class="stat-row">
+                        <div class="stat-row-left">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M12 8v4l3 3M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+                            </svg>
+                            <span id="profileTotalLabel">Total Taps</span>
+                        </div>
+                        <div class="stat-row-right" id="profileTotalTaps">0</div>
+                    </div>
+                    <div class="stat-row">
+                        <div class="stat-row-left">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            <span id="profileEarnedLabel">Total Earned</span>
+                        </div>
+                        <div class="stat-row-right" id="profileEarned">0.00 W-T</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Channel Bonus only - clean, no extra icons -->
+            <div class="bonus-section">
+                <div class="bonus-title" id="subscribeBonusTitle">CHANNEL BONUS</div>
+                <button class="subscribe-btn" id="subscribeBtn">
+                    <img src="icon1.png" alt="channel" class="channel-icon-img" id="channelIconImg" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23d4af37\' stroke-width=\'1.5\'%3E%3Cpath d=\'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z\'/%3E%3C/svg%3E';">
+                    <span class="channel-name">W-T Coin</span>
+                    <span id="subscribeBtnText">Join & Get 1 W-T</span>
+                </button>
+            </div>
+
+            <div class="footer-note">W-T · Premium Wallet</div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const tg = window.Telegram.WebApp;
+            tg.expand();
+            tg.enableClosingConfirmation();
+            
+            const TAP_REWARD = 0.02;
+            const MAX_TAPS_PER_DAY = 121;
+            const COOLDOWN_SECONDS = 3;
+            const CHANNEL_LINK = "https://t.me/+aNUeYrQ649w3YjUy";
+            const SUBSCRIBE_BONUS = 1;
+            
+            let currentLang = 'ru';
+            let balance = 0;
+            let todayTaps = 0;
+            let totalTaps = 0;
+            let lastTapDate = null;
+            let lastTapTime = 0;
+            let subscribeClaimed = false;
+            
+            let user = { id: 'anonymous', firstName: 'User', lastName: '', username: '' };
+            try {
+                if (tg.initDataUnsafe?.user) {
+                    user.id = tg.initDataUnsafe.user.id || 'anonymous';
+                    user.firstName = tg.initDataUnsafe.user.first_name || 'User';
+                    user.lastName = tg.initDataUnsafe.user.last_name || '';
+                    user.username = tg.initDataUnsafe.user.username || '';
+                }
+            } catch(e) {}
+            
+            function getNYDateStr() {
+                const now = new Date();
+                const nyDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+                return `${nyDate.getFullYear()}-${nyDate.getMonth()}-${nyDate.getDate()}`;
+            }
+            
+            function checkDailyReset() {
+                const currentNYDate = getNYDateStr();
+                if (lastTapDate !== currentNYDate) {
+                    todayTaps = 0;
+                    lastTapDate = currentNYDate;
+                    save();
+                    updateUI();
+                }
+            }
+            
+            function addTap() {
+                if (todayTaps >= MAX_TAPS_PER_DAY) {
+                    const t = translations[currentLang];
+                    showAlert(t.tapLimitReached, t.tapLimitReachedMsg);
+                    return false;
+                }
+                if (onCooldown()) {
+                    const t = translations[currentLang];
+                    showAlert(t.tapCooldown, t.tapCooldownMsg.replace('{time}', Math.ceil(remainingCooldown())));
+                    return false;
+                }
+                balance += TAP_REWARD;
+                todayTaps++;
+                totalTaps++;
+                lastTapTime = Date.now();
+                lastTapDate = getNYDateStr();
+                save();
+                updateUI();
+                updateCooldown();
+                return true;
+            }
+            
+            function claimSubscribeBonus() {
+                const t = translations[currentLang];
+                if (subscribeClaimed) {
+                    showAlert(t.subscribeBonusClaimed, '');
+                    return false;
+                }
+                window.open(CHANNEL_LINK, '_blank');
+                balance += SUBSCRIBE_BONUS;
+                subscribeClaimed = true;
+                save();
+                updateUI();
+                showAlert(t.subscribeBonusSuccess, `+${SUBSCRIBE_BONUS} W-T`);
+                return true;
+            }
+            
+            function save() {
+                localStorage.setItem('wt_tap_data', JSON.stringify({ 
+                    balance, todayTaps, totalTaps, lastTapDate, lastTapTime, subscribeClaimed
+                }));
+            }
+            
+            function load() {
+                const raw = localStorage.getItem('wt_tap_data');
+                if (raw) {
+                    try {
+                        const d = JSON.parse(raw);
+                        balance = d.balance || 0;
+                        todayTaps = d.todayTaps || 0;
+                        totalTaps = d.totalTaps || 0;
+                        lastTapDate = d.lastTapDate;
+                        lastTapTime = d.lastTapTime || 0;
+                        subscribeClaimed = d.subscribeClaimed || false;
+                        const currentNYDate = getNYDateStr();
+                        if (lastTapDate !== currentNYDate) todayTaps = 0;
+                        save();
+                    } catch(e) {}
+                }
+            }
+            
+            function onCooldown() { return Date.now() - lastTapTime < COOLDOWN_SECONDS * 1000; }
+            function remainingCooldown() { return Math.max(0, COOLDOWN_SECONDS - (Date.now() - lastTapTime) / 1000); }
+            
+            function showAlert(title, msg) {
+                if (tg.showAlert && msg) tg.showAlert(`${title}\n${msg}`);
+                else if (msg) alert(`${title}\n${msg}`);
+            }
+            
+            function showTapAnimation(x, y) {
+                const ripple = document.createElement('div');
+                ripple.className = 'tap-ripple';
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                document.body.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 550);
+                const num = document.createElement('div');
+                num.className = 'tap-number';
+                num.textContent = `+${TAP_REWARD.toFixed(3)}`;
+                num.style.left = x + 'px';
+                num.style.top = (y - 20) + 'px';
+                document.body.appendChild(num);
+                setTimeout(() => num.remove(), 700);
+                const coin = document.getElementById('coinLogo');
+                coin.classList.add('coin-flash');
+                setTimeout(() => coin.classList.remove('coin-flash'), 250);
+                const balanceEl = document.getElementById('balanceDisplay');
+                balanceEl.classList.add('balance-pulse');
+                setTimeout(() => balanceEl.classList.remove('balance-pulse'), 350);
+            }
+            
+            function handleTap(e) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                let x = e.clientX || (e.touches?.[0]?.clientX || rect.left + rect.width/2);
+                let y = e.clientY || (e.touches?.[0]?.clientY || rect.top + rect.height/2);
+                if (e.touches) e.preventDefault();
+                if (addTap()) {
+                    showTapAnimation(x, y);
+                    if (tg.HapticFeedback) tg.HapticFeedback.impact('light');
+                } else if (tg.HapticFeedback) {
+                    tg.HapticFeedback.notification('warning');
+                }
+            }
+            
+            function updateCooldown() {
+                const ring = document.getElementById('cooldownRing');
+                const timer = document.getElementById('cooldownTimer');
+                const target = document.getElementById('tapTarget');
+                if (onCooldown()) {
+                    timer.textContent = `(${remainingCooldown().toFixed(1)}s)`;
+                    ring.classList.add('active');
+                    target.classList.add('disabled');
+                } else {
+                    timer.textContent = '';
+                    ring.classList.remove('active');
+                    target.classList.remove('disabled');
+                }
+            }
+            
+            const translations = {
+                ru: {
+                    tokenSymbol: 'WAVES TOKEN', balanceLabel: 'ОБЩИЙ БАЛАНС', tapHintText: 'Тапай чтобы заработать | +0.02 W-T',
+                    todayLabel: 'ТАПОВ СЕГОДНЯ', totalTapsLabel: 'ВСЕГО ТАПОВ',
+                    profileTitle: 'Профиль', profileBalanceLabel: 'Баланс', profileTodayLabel: 'Тапов сегодня',
+                    profileTotalLabel: 'Всего тапов', profileEarnedLabel: 'Заработано',
+                    subscribeBonusTitle: 'БОНУС ЗА ПОДПИСКУ', subscribeBtnText: 'Подписаться + 1 W-T',
+                    subscribeClaimedText: 'Бонус получен ✓', tapLimitReached: 'Дневной лимит',
+                    tapLimitReachedMsg: 'Вы использовали 121 тап сегодня. Возвращайтесь завтра!',
+                    tapCooldown: 'Подождите', tapCooldownMsg: 'Можно тапать раз в 3 секунды. Осталось {time} сек.',
+                    subscribeBonusClaimed: 'Вы уже получили бонус за подписку!',
+                    subscribeBonusSuccess: 'Бонус получен! +1 W-T'
+                },
+                en: {
+                    tokenSymbol: 'WAVES TOKEN', balanceLabel: 'TOTAL BALANCE', tapHintText: 'Tap to earn | +0.02 W-T',
+                    todayLabel: 'TODAY TAPS', totalTapsLabel: 'TOTAL TAPS',
+                    profileTitle: 'Profile', profileBalanceLabel: 'Balance', profileTodayLabel: 'Today Taps',
+                    profileTotalLabel: 'Total Taps', profileEarnedLabel: 'Total Earned',
+                    subscribeBonusTitle: 'CHANNEL BONUS', subscribeBtnText: 'Join + 1 W-T',
+                    subscribeClaimedText: 'Bonus claimed ✓', tapLimitReached: 'Daily limit',
+                    tapLimitReachedMsg: 'You have reached 121 taps today. Come back tomorrow!',
+                    tapCooldown: 'Wait', tapCooldownMsg: 'You can tap every 3 seconds. Wait {time} sec.',
+                    subscribeBonusClaimed: 'You already claimed the subscribe bonus!',
+                    subscribeBonusSuccess: 'Bonus claimed! +1 W-T'
+                }
+            };
+            
+            function updateUI() {
+                const t = translations[currentLang];
+                document.getElementById('tokenSymbol').innerText = t.tokenSymbol;
+                document.getElementById('balanceLabel').innerText = t.balanceLabel;
+                document.getElementById('tapHintText').innerHTML = t.tapHintText;
+                document.getElementById('todayLabel').innerText = t.todayLabel;
+                document.getElementById('totalTapsLabel').innerText = t.totalTapsLabel;
+                document.getElementById('profileTitle').innerText = t.profileTitle;
+                document.getElementById('profileBalanceLabel').innerText = t.profileBalanceLabel;
+                document.getElementById('profileTodayLabel').innerText = t.profileTodayLabel;
+                document.getElementById('profileTotalLabel').innerText = t.profileTotalLabel;
+                document.getElementById('profileEarnedLabel').innerText = t.profileEarnedLabel;
+                document.getElementById('subscribeBonusTitle').innerText = t.subscribeBonusTitle;
+                
+                const subscribeBtn = document.getElementById('subscribeBtn');
+                if (subscribeClaimed) {
+                    subscribeBtn.innerHTML = `<img src="icon1.png" class="channel-icon-img" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23d4af37\' stroke-width=\'1.5\'%3E%3Cpath d=\'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z\'/%3E%3C/svg%3E';"> <span class="channel-name">W-T Coin</span> <span>${t.subscribeClaimedText}</span>`;
+                    subscribeBtn.disabled = true;
+                } else {
+                    subscribeBtn.innerHTML = `<img src="icon1.png" class="channel-icon-img" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23d4af37\' stroke-width=\'1.5\'%3E%3Cpath d=\'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z\'/%3E%3C/svg%3E';"> <span class="channel-name">W-T Coin</span> <span>${t.subscribeBtnText}</span>`;
+                    subscribeBtn.disabled = false;
+                }
+                
+                document.getElementById('balanceDisplay').innerHTML = balance.toFixed(2) + ' <small>W-T</small>';
+                document.getElementById('todayTaps').innerText = todayTaps;
+                document.getElementById('totalTaps').innerText = totalTaps;
+                document.getElementById('tapProgress').style.width = (todayTaps / MAX_TAPS_PER_DAY * 100) + '%';
+                
+                const avatarLetter = user.firstName ? user.firstName[0].toUpperCase() : 'W';
+                document.getElementById('headerAvatar').innerText = avatarLetter;
+                document.getElementById('profileAvatar').innerText = avatarLetter;
+                const displayName = user.firstName + (user.lastName ? ' ' + user.lastName : '');
+                document.getElementById('headerName').innerText = displayName.length > 12 ? displayName.slice(0,10)+'..' : displayName;
+                document.getElementById('profileName').innerText = displayName || 'W-T User';
+                const shortId = user.id !== 'anonymous' ? user.id.toString().slice(-8) : 'guest_' + Math.random().toString(36).substr(2, 6);
+                document.getElementById('profileId').innerHTML = `ID: ${shortId}`;
+                document.getElementById('profileBalance').innerHTML = balance.toFixed(2) + ' W-T';
+                document.getElementById('profileTodayTaps').innerHTML = `${todayTaps} / ${MAX_TAPS_PER_DAY}`;
+                document.getElementById('profileTotalTaps').innerHTML = totalTaps;
+                document.getElementById('profileEarned').innerHTML = (totalTaps * TAP_REWARD).toFixed(2) + ' W-T';
+                
+                document.querySelectorAll('.lang-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.getAttribute('data-lang') === currentLang);
+                });
+            }
+            
+            const mainPage = document.getElementById('mainPage');
+            const profilePage = document.getElementById('profilePage');
+            document.getElementById('openProfileBtn').addEventListener('click', () => {
+                profilePage.classList.add('active');
+                mainPage.classList.add('profile-open');
+                updateUI();
+            });
+            document.getElementById('closeProfileBtn').addEventListener('click', () => {
+                profilePage.classList.remove('active');
+                mainPage.classList.remove('profile-open');
+            });
+            
+            const tapTarget = document.getElementById('tapTarget');
+            tapTarget.addEventListener('click', handleTap);
+            tapTarget.addEventListener('touchstart', (e) => { e.preventDefault(); handleTap(e); });
+            
+            document.getElementById('subscribeBtn').addEventListener('click', () => claimSubscribeBonus());
+            
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const lang = btn.getAttribute('data-lang');
+                    if (lang && lang !== currentLang) {
+                        currentLang = lang;
+                        updateUI();
+                        save();
+                    }
+                });
+            });
+            
+            setInterval(() => {
+                checkDailyReset();
+                updateCooldown();
+            }, 200);
+            
+            load();
+            updateUI();
+            updateCooldown();
+            window.addEventListener('beforeunload', () => save());
+        })();
+    </script>
+</body>
+</html>
